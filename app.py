@@ -251,4 +251,4 @@ def server_error(e):
     return "<h1>500</h1><p>Internal server error</p>", 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,host='0.0.0.0',port=5000)
