@@ -5,15 +5,10 @@ import uuid
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session
 from werkzeug.utils import secure_filename
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-app = Flask(__name__)
 
 # --- Flask Configuration ---
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+app = Flask(__name__)
+app.config["SECRET_KEY"] = "d2c8f7a6e5b4c3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9"
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 app.config["ALLOWED_EXTENSIONS"] = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
@@ -21,15 +16,16 @@ app.config["ALLOWED_EXTENSIONS"] = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
 # Create uploads folder if not exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# --- AWS Setup ---
-AWS_REGION = os.getenv("AWS_REGION") or "us-east-1"
-SNS_TOPIC_ARN = os.getenv("SNS_TOPIC_ARN")
+# --- AWS Setup (Hardcoded Region & SNS Topic ARN) ---
+AWS_REGION = "us-east-1"
+SNS_TOPIC_ARN = "arn:aws:sns:us-east-1:xxxxx:meditrack_topic"
 
 # DynamoDB Table Names
 USERS_TABLE = "meditrack_users"
 MEDICINES_TABLE = "meditrack_medicines"
 DOCUMENTS_TABLE = "meditrack_documents"
 
+# AWS Resources
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 sns_client = boto3.client("sns", region_name=AWS_REGION)
 
@@ -37,7 +33,7 @@ users_table = dynamodb.Table(USERS_TABLE)
 medicines_table = dynamodb.Table(MEDICINES_TABLE)
 documents_table = dynamodb.Table(DOCUMENTS_TABLE)
 
-# --- Utilities ---
+# --- Utility Functions ---
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
@@ -125,8 +121,15 @@ def home():
         return redirect(url_for('login'))
 
     email = get_user_email()
-    med_count = medicines_table.scan(FilterExpression="user_email = :e", ExpressionAttributeValues={":e": email})['Count']
-    doc_count = documents_table.scan(FilterExpression="user_email = :e", ExpressionAttributeValues={":e": email})['Count']
+    med_count = medicines_table.scan(
+        FilterExpression="user_email = :e", 
+        ExpressionAttributeValues={":e": email}
+    )['Count']
+
+    doc_count = documents_table.scan(
+        FilterExpression="user_email = :e", 
+        ExpressionAttributeValues={":e": email}
+    )['Count']
 
     return render_template('home.html', med_count=med_count, doc_count=doc_count, full_name=get_user_fullname())
 
@@ -234,3 +237,4 @@ def server_error(e):
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
